@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ==== PLACEHOLDER GEOMETRY - measure the real robot and replace ==== -->
+  <xacro:property name="body_x"     value="0.220"/>   <!-- chassis length (m) -->
+  <xacro:property name="body_y"     value="0.130"/>   <!-- chassis width  (m) -->
+  <xacro:property name="body_z"     value="0.050"/>   <!-- chassis height (m) -->
+  <xacro:property name="body_mass"  value="1.600"/>   <!-- kg, incl. Jetson + battery -->
+
+  <xacro:property name="mount_x"    value="0.093"/>   <!-- front/rear coxa x offset -->
+  <xacro:property name="mount_y"    value="0.050"/>   <!-- front/rear coxa y offset -->
+  <xacro:property name="mid_y"      value="0.073"/>   <!-- middle coxa y offset -->
+
+  <xacro:property name="coxa_len"   value="0.045"/>
+  <xacro:property name="femur_len"  value="0.075"/>
+  <xacro:property name="tibia_len"  value="0.130"/>
+  <xacro:property name="seg_r"      value="0.012"/>   <!-- segment radius, visual -->
+  <xacro:property name="foot_r"     value="0.012"/>
+
+  <xacro:property name="coxa_mass"  value="0.060"/>
+  <xacro:property name="femur_mass" value="0.070"/>
+  <xacro:property name="tibia_mass" value="0.045"/>
+
+  <!-- Spawn height: body clearance when legs are in the default stance. -->
+  <xacro:property name="stand_height" value="0.120"/>
+
+  <!-- Serial-bus servo envelope. Check against the datasheet of the servos
+       actually fitted (HX-35H class, ~35 kg.cm @ 7.4 V) before tuning RL. -->
+  <xacro:property name="joint_limit"    value="2.09"/>   <!-- rad, +/-120 deg -->
+  <xacro:property name="joint_effort"   value="3.4"/>    <!-- N.m -->
+  <xacro:property name="joint_velocity" value="6.5"/>    <!-- rad/s -->
+  <xacro:property name="joint_damping"  value="0.05"/>
+  <xacro:property name="joint_friction" value="0.02"/>
+
+  <!-- ==== inertia helpers ==== -->
+  <xacro:macro name="box_inertial" params="m x y z">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia ixx="${m*(y*y+z*z)/12}" iyy="${m*(x*x+z*z)/12}" izz="${m*(x*x+y*y)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- Thin rod of length l along +x, centred at l/2. -->
+  <xacro:macro name="rod_inertial" params="m l r">
+    <inertial>
+      <origin xyz="${l/2} 0 0" rpy="0 0 0"/>
+      <mass value="${m}"/>
+      <inertia ixx="${m*r*r/2}" iyy="${m*(3*r*r+l*l)/12}" izz="${m*(3*r*r+l*l)/12}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+</robot>

@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    One 3-DoF leg. Frame convention (matches the usual hexapod IK write-up):
+      coxa joint  : yaw   about z, rotates the whole leg in the horizontal plane
+      femur joint : pitch about y, lifts the leg
+      tibia joint : pitch about y, extends/folds the foot
+    Each segment runs along its own +x axis.
+  -->
+  <xacro:macro name="leg" params="name x y yaw">
+
+    <!-- coxa -->
+    <joint name="${name}_coxa_joint" type="revolute">
+      <parent link="base_link"/>
+      <child  link="${name}_coxa_link"/>
+      <origin xyz="${x} ${y} 0" rpy="0 0 ${yaw}"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${-joint_limit}" upper="${joint_limit}"
+             effort="${joint_effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="${name}_coxa_link">
+      <visual>
+        <origin xyz="${coxa_len/2} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${seg_r}" length="${coxa_len}"/></geometry>
+        <material name="jethexa_leg"><color rgba="0.55 0.55 0.58 1"/></material>
+      </visual>
+      <collision>
+        <origin xyz="${coxa_len/2} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${seg_r}" length="${coxa_len}"/></geometry>
+      </collision>
+      <xacro:rod_inertial m="${coxa_mass}" l="${coxa_len}" r="${seg_r}"/>
+    </link>
+
+    <!-- femur -->
+    <joint name="${name}_femur_joint" type="revolute">
+      <parent link="${name}_coxa_link"/>
+      <child  link="${name}_femur_link"/>
+      <origin xyz="${coxa_len} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${-joint_limit}" upper="${joint_limit}"
+             effort="${joint_effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="${name}_femur_link">
+      <visual>
+        <origin xyz="${femur_len/2} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${seg_r}" length="${femur_len}"/></geometry>
+        <material name="jethexa_leg"/>
+      </visual>
+      <collision>
+        <origin xyz="${femur_len/2} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${seg_r}" length="${femur_len}"/></geometry>
+      </collision>
+      <xacro:rod_inertial m="${femur_mass}" l="${femur_len}" r="${seg_r}"/>
+    </link>
+
+    <!-- tibia -->
+    <joint name="${name}_tibia_joint" type="revolute">
+      <parent link="${name}_femur_link"/>
+      <child  link="${name}_tibia_link"/>
+      <origin xyz="${femur_len} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${-joint_limit}" upper="${joint_limit}"
+             effort="${joint_effort}" velocity="${joint_velocity}"/>
+      <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
+    </joint>
+
+    <link name="${name}_tibia_link">
+      <visual>
+        <origin xyz="${tibia_len/2} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${seg_r*0.8}" length="${tibia_len}"/></geometry>
+        <material name="jethexa_leg"/>
+      </visual>
+      <collision>
+        <origin xyz="${tibia_len/2} 0 0" rpy="0 ${pi/2} 0"/>
+        <geometry><cylinder radius="${seg_r*0.8}" length="${tibia_len}"/></geometry>
+      </collision>
+      <xacro:rod_inertial m="${tibia_mass}" l="${tibia_len}" r="${seg_r*0.8}"/>
+    </link>
+
+    <!-- foot: the only link that should touch the ground -->
+    <joint name="${name}_foot_joint" type="fixed">
+      <parent link="${name}_tibia_link"/>
+      <child  link="${name}_foot_link"/>
+      <origin xyz="${tibia_len} 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${name}_foot_link">
+      <visual>
+        <geometry><sphere radius="${foot_r}"/></geometry>
+        <material name="jethexa_foot"><color rgba="0.1 0.1 0.1 1"/></material>
+      </visual>
+      <collision>
+        <geometry><sphere radius="${foot_r}"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <!-- High friction + contact sensor on the feet; the leg segments are
+         low-friction so that scuffing is penalised rather than exploited. -->
+    <gazebo reference="${name}_foot_link">
+      <mu1>1.2</mu1>
+      <mu2>1.2</mu2>
+      <kp>1e6</kp>
+      <kd>100.0</kd>
+      <maxVel>0.0</maxVel>
+      <minDepth>0.001</minDepth>
+      <material>Gazebo/Black</material>
+      <sensor name="${name}_foot_contact" type="contact">
+        <always_on>true</always_on>
+        <update_rate>100</update_rate>
+        <contact><collision>${name}_foot_link_collision</collision></contact>
+        <plugin name="${name}_foot_contact_plugin" filename="libgazebo_ros_bumper.so">
+          <ros>
+            <namespace>/jethexa</namespace>
+            <remapping>bumper_states:=contacts/${name}_foot</remapping>
+          </ros>
+          <frame_name>${name}_foot_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <gazebo reference="${name}_coxa_link"><mu1>0.3</mu1><mu2>0.3</mu2><material>Gazebo/Grey</material></gazebo>
+    <gazebo reference="${name}_femur_link"><mu1>0.3</mu1><mu2>0.3</mu2><material>Gazebo/Grey</material></gazebo>
+    <gazebo reference="${name}_tibia_link"><mu1>0.3</mu1><mu2>0.3</mu2><material>Gazebo/Grey</material></gazebo>
+
+  </xacro:macro>
+</robot>

@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<!--
+  JetHexa (Hiwonder, Advanced Kit) - simplified simulation model.
+
+  18 DoF: 6 legs x (coxa yaw, femur pitch, tibia pitch).
+  Link lengths / masses below are PLACEHOLDERS derived from the published
+  footprint of the robot. Measure the physical unit and update `props.xacro`
+  before trusting any sim-to-real transfer. See docs/jethexa_hardware.md.
+-->
+<robot name="jethexa" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find jethexa_sim)/urdf/props.xacro"/>
+  <xacro:include filename="$(find jethexa_sim)/urdf/leg.xacro"/>
+  <xacro:include filename="$(find jethexa_sim)/urdf/sensors.xacro"/>
+
+  <!-- ros2_control interface macros (defined before first use) -->
+    <xacro:macro name="joint_iface" params="jname">
+    <joint name="${jname}">
+      <command_interface name="position">
+        <param name="min">${-joint_limit}</param>
+        <param name="max">${joint_limit}</param>
+      </command_interface>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </xacro:macro>
+  <xacro:macro name="leg_ifaces" params="leg">
+    <xacro:joint_iface jname="${leg}_coxa_joint"/>
+    <xacro:joint_iface jname="${leg}_femur_joint"/>
+    <xacro:joint_iface jname="${leg}_tibia_joint"/>
+  </xacro:macro>
+
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_to_base" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${stand_height}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <geometry><box size="${body_x} ${body_y} ${body_z}"/></geometry>
+      <material name="jethexa_body"><color rgba="0.15 0.15 0.17 1"/></material>
+    </visual>
+    <collision>
+      <geometry><box size="${body_x} ${body_y} ${body_z}"/></geometry>
+    </collision>
+    <xacro:box_inertial m="${body_mass}" x="${body_x}" y="${body_y}" z="${body_z}"/>
+  </link>
+
+  <gazebo reference="base_link">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <!-- leg name, mount x, mount y, mount yaw -->
+  <xacro:leg name="lf" x="${mount_x}"  y="${mount_y}"  yaw="${radians(45)}"/>
+  <xacro:leg name="lm" x="0"           y="${mid_y}"    yaw="${radians(90)}"/>
+  <xacro:leg name="lr" x="${-mount_x}" y="${mount_y}"  yaw="${radians(135)}"/>
+  <xacro:leg name="rf" x="${mount_x}"  y="${-mount_y}" yaw="${radians(-45)}"/>
+  <xacro:leg name="rm" x="0"           y="${-mid_y}"   yaw="${radians(-90)}"/>
+  <xacro:leg name="rr" x="${-mount_x}" y="${-mount_y}" yaw="${radians(-135)}"/>
+
+  <xacro:jethexa_sensors/>
+
+  <!-- ros2_control: 18 position-commanded joints -->
+  <ros2_control name="JetHexaSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <xacro:leg_ifaces leg="lf"/>
+    <xacro:leg_ifaces leg="lm"/>
+    <xacro:leg_ifaces leg="lr"/>
+    <xacro:leg_ifaces leg="rf"/>
+    <xacro:leg_ifaces leg="rm"/>
+    <xacro:leg_ifaces leg="rr"/>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find jethexa_sim)/config/controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>

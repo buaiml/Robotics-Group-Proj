@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    Sensor payload of the JetHexa Advanced Kit:
+      - EAI G4 360-deg 2D lidar, mast-mounted above the chassis
+      - 3D depth camera (RGB + depth), front-facing
+      - IMU on the controller board
+    Mount poses are approximate; re-measure against the real frame.
+  -->
+  <xacro:macro name="jethexa_sensors">
+
+    <!-- ================= 2D LIDAR ================= -->
+    <joint name="lidar_joint" type="fixed">
+      <parent link="base_link"/>
+      <child  link="lidar_link"/>
+      <origin xyz="-0.020 0 ${body_z/2 + 0.060}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="lidar_link">
+      <visual>
+        <geometry><cylinder radius="0.035" length="0.040"/></geometry>
+        <material name="lidar_blue"><color rgba="0.1 0.2 0.5 1"/></material>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="0.035" length="0.040"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="0.18"/>
+        <inertia ixx="8e-5" iyy="8e-5" izz="1.1e-4" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <gazebo reference="lidar_link">
+      <material>Gazebo/Blue</material>
+      <sensor name="lidar" type="ray">
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <update_rate>10.0</update_rate>
+        <ray>
+          <scan>
+            <horizontal>
+              <samples>720</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.12</min>
+            <max>10.0</max>
+            <resolution>0.01</resolution>
+          </range>
+          <noise>
+            <type>gaussian</type>
+            <mean>0.0</mean>
+            <stddev>0.01</stddev>
+          </noise>
+        </ray>
+        <plugin name="lidar_plugin" filename="libgazebo_ros_ray_sensor.so">
+          <ros>
+            <namespace>/jethexa</namespace>
+            <remapping>~/out:=scan</remapping>
+          </ros>
+          <output_type>sensor_msgs/LaserScan</output_type>
+          <frame_name>lidar_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- ================= DEPTH CAMERA ================= -->
+    <joint name="camera_joint" type="fixed">
+      <parent link="base_link"/>
+      <child  link="camera_link"/>
+      <origin xyz="${body_x/2} 0 0.015" rpy="0 0 0"/>
+    </joint>
+
+    <link name="camera_link">
+      <visual>
+        <geometry><box size="0.025 0.110 0.030"/></geometry>
+        <material name="camera_grey"><color rgba="0.2 0.2 0.2 1"/></material>
+      </visual>
+      <collision>
+        <geometry><box size="0.025 0.110 0.030"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="0.12"/>
+        <inertia ixx="1.3e-4" iyy="2e-5" izz="1.3e-4" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <!-- REP-103 optical frame (z forward, x right) for image consumers -->
+    <joint name="camera_optical_joint" type="fixed">
+      <parent link="camera_link"/>
+      <child  link="camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+    <link name="camera_optical_frame"/>
+
+    <gazebo reference="camera_link">
+      <material>Gazebo/Grey</material>
+      <sensor name="depth_camera" type="depth">
+        <always_on>true</always_on>
+        <update_rate>15.0</update_rate>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.3</near>
+            <far>8.0</far>
+          </clip>
+        </camera>
+        <plugin name="depth_camera_plugin" filename="libgazebo_ros_camera.so">
+          <ros>
+            <namespace>/jethexa</namespace>
+          </ros>
+          <camera_name>depth_camera</camera_name>
+          <frame_name>camera_optical_frame</frame_name>
+          <min_depth>0.3</min_depth>
+          <max_depth>8.0</max_depth>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- ================= IMU ================= -->
+    <joint name="imu_joint" type="fixed">
+      <parent link="base_link"/>
+      <child  link="imu_link"/>
+      <origin xyz="0 0 ${body_z/2}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="imu_link">
+      <inertial>
+        <mass value="0.01"/>
+        <inertia ixx="1e-7" iyy="1e-7" izz="1e-7" ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+
+    <gazebo reference="imu_link">
+      <sensor name="imu" type="imu">
+        <always_on>true</always_on>
+        <update_rate>100.0</update_rate>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian"><mean>0.0</mean><stddev>2e-3</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0.0</mean><stddev>2e-3</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0.0</mean><stddev>2e-3</stddev></noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></z>
+          </linear_acceleration>
+        </imu>
+        <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+          <ros>
+            <namespace>/jethexa</namespace>
+            <remapping>~/out:=imu</remapping>
+          </ros>
+          <frame_name>imu_link</frame_name>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+  </xacro:macro>
+</robot>

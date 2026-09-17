@@ -1,0 +1,36 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 200  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # Single group position controller over all 18 joints.
+    # Command: std_msgs/Float64MultiArray on
+    #   /joint_group_position_controller/commands
+    # Joint order below is the canonical order used by the RL env.
+    joint_group_position_controller:
+      type: forward_command_controller/ForwardCommandController
+
+joint_group_position_controller:
+  ros__parameters:
+    interface_name: position
+    joints:
+      - lf_coxa_joint
+      - lf_femur_joint
+      - lf_tibia_joint
+      - lm_coxa_joint
+      - lm_femur_joint
+      - lm_tibia_joint
+      - lr_coxa_joint
+      - lr_femur_joint
+      - lr_tibia_joint
+      - rf_coxa_joint
+      - rf_femur_joint
+      - rf_tibia_joint
+      - rm_coxa_joint
+      - rm_femur_joint
+      - rm_tibia_joint
+      - rr_coxa_joint
+      - rr_femur_joint
+      - rr_tibia_joint
