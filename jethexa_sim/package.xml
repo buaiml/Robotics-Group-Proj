@@ -3,7 +3,7 @@
 <package format="3">
   <name>jethexa_sim</name>
   <version>0.1.0</version>
-  <description>Starter Gazebo simulation for the Hiwonder JetHexa (Advanced Kit).</description>
+  <description>Starter Gazebo Harmonic simulation for the Hiwonder JetHexa (Advanced Kit), on ROS 2 Humble.</description>
   <maintainer email="achyut.shastri@gmail.com">AI Society Robotics</maintainer>
   <license>MIT</license>
 
@@ -11,9 +11,9 @@
 
   <exec_depend>xacro</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>gazebo_ros</exec_depend>
-  <exec_depend>gazebo_ros2_control</exec_depend>
-  <exec_depend>gazebo_plugins</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>gz_ros2_control</exec_depend>
   <exec_depend>controller_manager</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>
   <exec_depend>forward_command_controller</exec_depend>

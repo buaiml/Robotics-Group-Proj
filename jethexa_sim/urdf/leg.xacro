@@ -27,7 +27,7 @@
         <geometry><cylinder radius="${seg_r}" length="${coxa_len}"/></geometry>
         <material name="jethexa_leg"><color rgba="0.55 0.55 0.58 1"/></material>
       </visual>
-      <collision>
+      <collision name="${name}_coxa_collision">
         <origin xyz="${coxa_len/2} 0 0" rpy="0 ${pi/2} 0"/>
         <geometry><cylinder radius="${seg_r}" length="${coxa_len}"/></geometry>
       </collision>
@@ -51,14 +51,14 @@
         <geometry><cylinder radius="${seg_r}" length="${femur_len}"/></geometry>
         <material name="jethexa_leg"/>
       </visual>
-      <collision>
+      <collision name="${name}_femur_collision">
         <origin xyz="${femur_len/2} 0 0" rpy="0 ${pi/2} 0"/>
         <geometry><cylinder radius="${seg_r}" length="${femur_len}"/></geometry>
       </collision>
       <xacro:rod_inertial m="${femur_mass}" l="${femur_len}" r="${seg_r}"/>
     </link>
 
-    <!-- tibia -->
+    <!-- tibia, with the foot as a second collision on the same link -->
     <joint name="${name}_tibia_joint" type="revolute">
       <parent link="${name}_femur_link"/>
       <child  link="${name}_tibia_link"/>
@@ -69,67 +69,63 @@
       <dynamics damping="${joint_damping}" friction="${joint_friction}"/>
     </joint>
 
+    <!--
+      The foot is a named collision on the tibia rather than its own link on a
+      fixed joint. It was originally moved here to dodge sdformat's collision
+      rename - that did not work, because sdformat prefixes EVERY collision
+      with <link>_fixed_joint_lump__, revolute-jointed links included. It is
+      kept this way regardless: six fewer links and six fewer weld constraints
+      for the solver, for no loss, since nothing needs a foot TF frame.
+    -->
     <link name="${name}_tibia_link">
       <visual>
         <origin xyz="${tibia_len/2} 0 0" rpy="0 ${pi/2} 0"/>
         <geometry><cylinder radius="${seg_r*0.8}" length="${tibia_len}"/></geometry>
         <material name="jethexa_leg"/>
       </visual>
-      <collision>
+      <collision name="${name}_shin_collision">
         <origin xyz="${tibia_len/2} 0 0" rpy="0 ${pi/2} 0"/>
         <geometry><cylinder radius="${seg_r*0.8}" length="${tibia_len}"/></geometry>
       </collision>
-      <xacro:rod_inertial m="${tibia_mass}" l="${tibia_len}" r="${seg_r*0.8}"/>
-    </link>
 
-    <!-- foot: the only link that should touch the ground -->
-    <joint name="${name}_foot_joint" type="fixed">
-      <parent link="${name}_tibia_link"/>
-      <child  link="${name}_foot_link"/>
-      <origin xyz="${tibia_len} 0 0" rpy="0 0 0"/>
-    </joint>
-
-    <link name="${name}_foot_link">
+      <!-- foot: the only geometry that should normally touch the ground -->
       <visual>
+        <origin xyz="${tibia_len} 0 0" rpy="0 0 0"/>
         <geometry><sphere radius="${foot_r}"/></geometry>
         <material name="jethexa_foot"><color rgba="0.1 0.1 0.1 1"/></material>
       </visual>
-      <collision>
+      <collision name="${name}_foot_collision">
+        <origin xyz="${tibia_len} 0 0" rpy="0 0 0"/>
         <geometry><sphere radius="${foot_r}"/></geometry>
       </collision>
-      <inertial>
-        <mass value="0.01"/>
-        <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" ixz="0" iyz="0"/>
-      </inertial>
+
+      <xacro:rod_inertial m="${tibia_mass}" l="${tibia_len}" r="${seg_r*0.8}"/>
     </link>
 
-    <!-- High friction + contact sensor on the feet; the leg segments are
-         low-friction so that scuffing is penalised rather than exploited. -->
-    <gazebo reference="${name}_foot_link">
-      <mu1>1.2</mu1>
-      <mu2>1.2</mu2>
-      <kp>1e6</kp>
-      <kd>100.0</kd>
-      <maxVel>0.0</maxVel>
-      <minDepth>0.001</minDepth>
-      <material>Gazebo/Black</material>
-      <sensor name="${name}_foot_contact" type="contact">
-        <always_on>true</always_on>
-        <update_rate>100</update_rate>
-        <contact><collision>${name}_foot_link_collision</collision></contact>
-        <plugin name="${name}_foot_contact_plugin" filename="libgazebo_ros_bumper.so">
-          <ros>
-            <namespace>/jethexa</namespace>
-            <remapping>bumper_states:=contacts/${name}_foot</remapping>
-          </ros>
-          <frame_name>${name}_foot_link</frame_name>
-        </plugin>
-      </sensor>
-    </gazebo>
+    <!--
+      NO FOOT CONTACT SENSORS. Two reasons, in order of importance:
 
-    <gazebo reference="${name}_coxa_link"><mu1>0.3</mu1><mu2>0.3</mu2><material>Gazebo/Grey</material></gazebo>
-    <gazebo reference="${name}_femur_link"><mu1>0.3</mu1><mu2>0.3</mu2><material>Gazebo/Grey</material></gazebo>
-    <gazebo reference="${name}_tibia_link"><mu1>0.3</mu1><mu2>0.3</mu2><material>Gazebo/Grey</material></gazebo>
+      1. The real JetHexa has no foot switches, so a policy that consumes foot
+         contact cannot be deployed. The observation space excludes it by
+         design - see docs/jethexa_hardware.md.
+      2. They did not work anyway. Contact sensors on a URDF-spawned model in
+         ROS 2 Humble + Gazebo Harmonic advertise their topic and then publish
+         nothing, whichever collision name they reference. Verified on both the
+         as-written and the sdformat-emitted name.
+
+      If contact-based reward shaping is wanted later, do it in the MuJoCo
+      training sim, where contacts are directly available - that is where
+      training happens anyway. If Gazebo contacts are genuinely needed, the
+      model has to be authored in SDF rather than converted from URDF.
+
+      Friction is not set per link at all. <mu1>/<mu2> attach by collision name
+      and sdformat renames collisions, so they silently did nothing and were
+      removed. Contact friction comes from the ground surface in the world file
+      combined with gz's default, which lands near rubber-on-concrete. The cost:
+      we cannot make the feet grippier than the shins, so a policy that learns
+      to shuffle on its shins is not being penalised for it. Fixing that
+      properly means authoring the model in SDF instead of URDF.
+    -->
 
   </xacro:macro>
 </robot>

@@ -1,46 +1,151 @@
 # Weeks 1 and 2
 
-Pick one task per week, about 1.5 hours each. If this is your first robotics
-project, take one of the earlier ones in the list, they need the least
-background. Ask in the channel if you get stuck for more than 20 minutes,
-that's normal and not a sign you picked wrong.
+One task per person per week, about 1.5 hours each.
 
-## Week 1
+Week 1 is the same for everyone. For Week 2, pick whichever area below you
+actually find interesting — that matters more than balancing the areas, and
+nothing here is on the critical path yet. If two of you land on the same area,
+pair up and take a task each: the tasks in each area overlap on purpose, so you
+have something to talk about. Whoever is newer to the topic presents it at the
+meeting.
 
-1. **Get the simulator running** (2 people) — Build and run `jethexa_sim` on a clean Ubuntu 22.04 machine, then write the steps down so everyone else can copy them. This is the fiddliest task here, so take it if you're comfortable with Linux and the terminal. Start it first, everyone else is waiting on it.
+Areas that nobody picks just wait for Week 3.
 
-2. **Break the simulator** — Run it, run `stand.py`, change the stance angles, drop the robot from a height, watch the joint numbers. File an issue for anything that looks wrong. You don't need to fix any of it.
+---
 
-3. **Measure the robot** (2 people, needs the robot) — Ruler, calipers, scale. Leg segment lengths, where the legs attach to the body and at what angle, body size, standing height, mass, where the sensors are, how far each joint can rotate. Write it in `docs/measurements.md`. Every number in our model is currently a guess, so this is more important than it sounds.
+## Week 1 — everyone
 
-4. **Make one leg move** — Write a small script that moves a single joint back and forth, then one that makes a leg wave. You're copying the pattern in `scripts/stand.py`. Good first task if you've never touched ROS.
+**Get the simulator running on your own machine.** Not one person for the group:
+everyone, individually. Follow [setup.md](setup.md), build the workspace, launch
+the sim, run `stand.py`, and watch the robot stand up. [commands.md](commands.md)
+has everything you'll need to type.
 
-5. **Walk the route** (2 people) — Take a tape measure and a phone to the route between the two buildings. Measure the crosswalk, the kerb heights, the ramp slopes, the pavement and road width. Photograph anything in the way. Put it in `docs/route/` with a sketch map, and list the three things you think will stop the robot. It's about 12 cm tall.
+It matters that all eight of you do this. If one person sets up everybody's
+environment, seven people never learn how their tools fit together, and that
+person becomes a bottleneck for fourteen weeks.
 
-## Week 2
+Then two things:
 
-1. **Put the real numbers in the model** (needs W1.3) — Replace the placeholder values in `urdf/props.xacro` with the measured ones, run the sim, see what changed.
+1. **Fix the instructions.** Wherever [setup.md](setup.md) was wrong, unclear or
+   incomplete on your machine, PR a fix. By the eighth person it should be
+   flawless.
+2. **Break it a bit.** Change the stance angles in `stand.py`, drop the robot
+   from a metre up, watch the joint numbers go by. File an issue for anything
+   that looks wrong. You don't have to fix any of it.
 
-2. **Make it stand properly** (needs W1.2) — The robot sinks and slides. Tune the contact settings (friction, stiffness, damping, timestep) until it holds still for 30 seconds. Mostly changing a number and rerunning, but write down what each one did.
+Done early? Start on your Week 2 area.
 
-3. **Forward kinematics of one leg** — Work out where the foot ends up given the three joint angles, then check your answer against the simulator. Some trigonometry and a short script. If you want to go further, try the reverse (foot position in, angles out) and mention it at the meeting.
+---
 
-4. **Get the real robot running** (2 people, needs the robot) — Boot it, connect to it, run one of the demos it came with, drive it around, record some lidar and camera data. Write down how you did it in `docs/robot_bringup.md` so the next person doesn't have to work it out again.
+## Week 2 — pick an area
 
-5. **Read about how robots learn to walk** — Rudin 2021 ("Learning to Walk in Minutes") and Lee 2020 (quadrupeds on rough terrain). Skim, don't study. Half a page in plain language: what did they feed the robot, what did they reward it for, how long did training take. Bring questions to the meeting rather than pretending it all made sense.
+### The robot model
 
-6. **Build a glossary** — Collect the terms flying around this project (URDF, link, joint, DoF, topic, TF, policy, reward, gait) and write one plain sentence each in `docs/glossary.md`. Genuinely useful for everyone, and you'll learn the vocabulary by writing it.
+Everything about our robot's shape is currently a guess taken from a product
+photo. The real numbers exist — they're on the robot.
 
-7. **Write down what we're actually trying to do** — "Walk to the other building" isn't testable. How fast? How often is it allowed to fall? What terrain? What time limit? Can a human touch it mid-run? One page in `docs/problem_statement.md`, and expect people to argue with it at the meeting.
+- **Get the vendor's URDF off the robot.** Hiwonder ships an accurate URDF with
+  meshes as part of the robot's own ROS packages. Find it, copy it off, and
+  report what's in it: link lengths, joint origins, masses, inertias, mesh
+  files. This is the task that makes our sim real, and it's a file transfer
+  rather than an afternoon with calipers.
+- **Fold those numbers into our model.** Replace the placeholders in
+  `urdf/props.xacro`. Keep our Harmonic and `ros2_control` wiring — we only want
+  their geometry. Watch out: masses in vendor URDFs are often approximate, so
+  put the robot on a scale once and check the total. Then run
+  `scripts/check_model.py` and see whether the robot still stands.
+
+### Legs and gait
+
+- **Map the joints.** For each of the 18, command a small movement and write down
+  which way the robot actually moves. Positive femur angle — up or down? Sign
+  errors here waste days later. Produce a table plus a script that sweeps one
+  joint on demand.
+- **Write an open-loop tripod gait.** A node that walks the robot by playing
+  scripted joint angles — no learning, no feedback, just sine waves or keyframes
+  to `/joint_group_position_controller/commands`. It will probably look
+  terrible. That's the point: it's the baseline the learned policy has to beat,
+  and it tells us whether the model can walk at all.
+- **Plot one leg's reachable workspace.** Sweep the three joints through their
+  limits, plot every foot position you can reach. This tells us the real stride
+  length and how tall a kerb the robot could conceivably step onto.
+
+### Sensing
+
+- **Get RViz onto the live data.** One config showing the robot model, the TF
+  tree, the lidar scan and the depth point cloud together. Commit it to
+  `config/`.
+- **Record a bag and read it back.** Record while the robot stands and the
+  sensors run, then open it: what topics, what rates, how many MB per minute.
+  Write down the commands. We'll record a lot of these.
+- **Work out what the robot can see of a kerb.** The lidar is mast-mounted and
+  2D, so it cannot see a step at all — the depth camera is the only source. Put
+  a box in the world and find out what the depth image actually gives you at
+  10, 20 and 30 mm. This shapes the whole terrain approach.
+
+### Learning
+
+Groundwork. The real RL work starts once the teaching sessions catch up.
+
+- **Read two papers and report back.** Rudin 2021 ("Learning to Walk in
+  Minutes") and Lee 2020 (quadrupeds over rough terrain). Skim, don't study.
+  Half a page in plain language: what did they feed the robot, what did they
+  reward it for, how long did training take.
+- **Work out our training budget.** Run `gz topic -e -t /stats -n 1` to get the
+  real-time factor, then do the arithmetic: how long would 10⁸ steps take in
+  Gazebo? Compare against what MuJoCo claims. Write down the numbers. We've
+  asserted Gazebo is too slow to train in — check whether that's actually true
+  instead of taking our word for it.
+- **Draft what the policy sees and does.** For every input you'd want to give
+  it, ask whether the real robot can measure that, how fast, and how noisily.
+  [jethexa_hardware.md](jethexa_hardware.md) is the constraint list. Bring it to
+  the meeting to be pulled apart.
+
+### Worlds and terrain
+
+- **Build a terrain test world.** An SDF world with flat ground, a gentle slope,
+  and steps of 10, 20 and 30 mm. This becomes the rig everything gets tested on.
+  Copy `worlds/flat_ground.sdf` and go from there.
+- **Walk the route** (better with two people, outside). Measure and photograph
+  the crossing between the two buildings: crosswalk width, kerb heights, ramp
+  slopes, pavement and road width. Into `docs/route/` with a sketch map, plus
+  the three things you think will stop a 12 cm robot.
+
+### The real robot
+
+- **Bring it up, and write down how.** Boot it, connect, run a vendor demo,
+  drive it around, record some lidar and camera data. Recipe into
+  `docs/robot_bringup.md` so nobody has to rediscover it. **Back up the SD card
+  before you change anything** — it's the only copy of the vendor software.
+- **Time the servo bus.** All 18 servos share one 115200-baud serial bus, which
+  we estimate caps a command-and-read cycle near 25–30 Hz. That would undercut
+  the 50 Hz control loop we've been assuming. Measure it: how fast can you
+  actually command 18 joints and read them back?
+
+### Tooling and framing
+
+- **Make the checks run automatically.** `scripts/check_model.py` catches silent
+  model breakage, but only if somebody remembers to run it. Wire it into CI on
+  PRs, or a pre-commit hook, plus one command that builds and checks.
+- **Write down what we're actually trying to do.** "Walk to the other building"
+  isn't testable. How fast? How often may it fall? What terrain? What time
+  limit? May a human touch it mid-run? One page in
+  `docs/problem_statement.md`, and expect argument at the meeting.
+- **Build a glossary.** URDF, link, joint, DoF, topic, TF, policy, reward, gait —
+  one plain sentence each in `docs/glossary.md`. You'll learn the vocabulary by
+  writing it, and everyone else gets to stop nodding along.
+
+---
 
 ## After two weeks
 
-Anyone can launch the sim, the robot stands still, and the model matches the
-real robot. Somebody has made a leg move on purpose, somebody has driven the real
-robot, and we agree on what we're building.
+All eight of you can launch the sim unaided, and the model is built from the
+robot's real geometry rather than guesses. Beyond that it depends what people
+picked — but we should have at least one of: something walking open-loop, the
+sensors visible in RViz, or a written problem statement we agree on.
 
-## Coming in Weeks 3 and 4, not now
+## Coming in Weeks 3 and 4
 
-Setting up the training simulator, surveying the RL tools and model zoos, bench
-testing the servos, and deciding what the policy sees and does. These need the
-teaching sessions on simulators and reinforcement learning first.
+Setting up the MuJoCo training simulator, surveying the RL tools and model zoos,
+and settling the observation and action spaces. Those need the teaching sessions
+on simulators and reinforcement learning first.

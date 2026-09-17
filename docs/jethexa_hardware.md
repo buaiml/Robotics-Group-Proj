@@ -45,16 +45,45 @@ at 50 Hz on this hardware is not deployable — keep the actor network small
 | Item | Spec |
 |---|---|
 | Joints | 18 (6 legs × coxa / femur / tibia) |
-| Servos | 18 × serial-bus servos, HX-35H class, ≈35 kg·cm @ 7.4 V **[verify model]** |
-| Bus | half-duplex serial daisy chain to the expansion board **[verify]** |
-| Feedback | position (and usually temperature / voltage) read back over the bus |
+| Servos | 18 × **Hiwonder HX-35H** serial bus servos (confirmed) |
+| Range | 0–240°, i.e. ±120° about centre; 0–1000 command counts map to that range |
+| Torque | 25 kg·cm running, 35 kg·cm stall @ 11.1 V → **2.45 N·m / 3.43 N·m** |
+| Speed | 0.18 s per 60° @ 11.1 V → **5.82 rad/s** no-load |
+| Accuracy | 0.3° |
+| Current | 100 mA no load, 3 A stall (× 18 servos — size the battery budget accordingly) |
+| Bus | UART serial daisy chain, **115200 baud** |
+| Feedback | position, voltage and temperature, read back over the same bus |
 | Control mode | **position only** — no torque command, no direct current control |
+
+Working voltage is **9–12.6 V**, so the pack is 3S (11.1 V nominal), not the
+7.4 V quoted for some other Hiwonder kits. Confirm against the actual battery.
 
 **This is the single most important constraint on the RL design.** The action
 space must be joint *positions* (or position deltas), not torques. The servo's
 internal PD loop sits between the policy and the world, and its gains are not
 directly observable — identifying its effective stiffness/damping is a Week 2+
 task and the main sim-to-real gap.
+
+### The bus is a bandwidth constraint, and it may cap our control rate
+
+115200 baud is roughly 11.5 kB/s. A Hiwonder position command is about 10 bytes,
+so writing all 18 joints costs ~180 bytes ≈ **16 ms**, i.e. a ceiling near 60 Hz
+for commands alone. Reading position back adds a request and a reply per servo
+(~14 bytes plus turnaround), which roughly doubles it — call it **25–30 Hz** for
+a full command-and-read cycle on a single bus.
+
+Our working assumption has been a 50 Hz control loop. That may not be reachable
+with full joint feedback. Three ways out, in rough order of preference:
+
+1. Feed the policy the *commanded* joint positions instead of measured ones, plus
+   the IMU, and skip the per-cycle readback. Costs almost nothing and is what
+   many deployed locomotion policies do anyway.
+2. Read feedback at a lower rate than the control loop.
+3. Check whether the expansion board splits the 18 servos across more than one
+   bus, which would change the arithmetic. **[verify on the robot]**
+
+This is worth measuring early — the answer constrains both the control rate and
+the observation space, and both are decisions we make in the first month.
 
 ## 4. Sensing
 
@@ -64,15 +93,17 @@ task and the main sim-to-real gap.
 | Depth camera | 3D depth camera, RGB + depth, 640×480 **[verify model — Astra-class]** | `/jethexa/depth_camera/*` |
 | IMU | 6-axis on the expansion board **[verify part]** | `/jethexa/imu` |
 | Servo feedback | per-joint position from the bus | `/joint_states` |
-| Foot contact | **not present on hardware** | `/jethexa/contacts/<leg>_foot` |
+| Foot contact | **not present on hardware** | not available in sim either |
 
 Two notes that shape the whole project:
 
-- **Foot contact is simulation-only.** Gazebo gives us per-foot contact via a
-  bumper sensor; the real robot has no foot switches. Any observation the policy
-  consumes must either exclude contact, or contact must be estimated on-robot
-  (from servo load / IMU). Decide this before designing the observation space —
-  training on a signal we cannot reproduce is the classic way to waste four weeks.
+- **There is no foot contact signal, in sim or on the robot.** The real JetHexa
+  has no foot switches, and Gazebo's contact sensors turned out not to publish
+  for our URDF-spawned model either (see the README's known limitations). So the
+  observation space excludes contact, full stop. If contact is wanted for reward
+  shaping it belongs in the MuJoCo training sim, where it is directly available,
+  and where training happens anyway. Training on a signal we cannot reproduce on
+  hardware is the classic way to waste four weeks.
 - **The lidar is 2D and mast-mounted.** It sees walls, poles and vehicles at one
   height. It does **not** see curbs, kerb ramps or the crosswalk surface. All
   terrain sensing has to come from the depth camera and the IMU.

@@ -1,0 +1,63 @@
+# gz transport <-> ROS 2 topic bridge (ros_gz_bridge).
+#
+# Sensors in gz-sim publish on gz transport, not on ROS topics. This file is
+# what makes them visible to ROS, RViz, SLAM and Nav2.
+#
+# Joint states and joint commands do NOT appear here: gz_ros2_control publishes
+# /joint_states and takes commands directly on the ROS side.
+
+- ros_topic_name: "/clock"
+  gz_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# ---- 2D lidar (EAI G4) ----
+- ros_topic_name: "/jethexa/scan"
+  gz_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+
+# ---- IMU ----
+- ros_topic_name: "/jethexa/imu"
+  gz_topic_name: "/imu"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: GZ_TO_ROS
+
+# ---- RGB camera ----
+- ros_topic_name: "/jethexa/rgb_camera/image_raw"
+  gz_topic_name: "/rgb_camera"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/jethexa/rgb_camera/camera_info"
+  gz_topic_name: "/rgb_camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+
+# ---- Depth camera ----
+- ros_topic_name: "/jethexa/depth_camera/image_raw"
+  gz_topic_name: "/depth_camera"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/jethexa/depth_camera/camera_info"
+  gz_topic_name: "/depth_camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  gz_type_name: "gz.msgs.CameraInfo"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "/jethexa/depth_camera/points"
+  gz_topic_name: "/depth_camera/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+
+# Foot contacts are deliberately absent: the hardware has no foot switches,
+# and Gazebo's contact sensors do not publish for URDF-spawned models here.
+# See the comment in urdf/leg.xacro.

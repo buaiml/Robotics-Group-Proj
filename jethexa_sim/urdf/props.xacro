@@ -24,11 +24,16 @@
   <!-- Spawn height: body clearance when legs are in the default stance. -->
   <xacro:property name="stand_height" value="0.120"/>
 
-  <!-- Serial-bus servo envelope. Check against the datasheet of the servos
-       actually fitted (HX-35H class, ~35 kg.cm @ 7.4 V) before tuning RL. -->
-  <xacro:property name="joint_limit"    value="2.09"/>   <!-- rad, +/-120 deg -->
-  <xacro:property name="joint_effort"   value="3.4"/>    <!-- N.m -->
-  <xacro:property name="joint_velocity" value="6.5"/>    <!-- rad/s -->
+  <!-- Hiwonder HX-35H serial bus servo, from the datasheet:
+         range    0-240 deg            -> +/-2.094 rad about centre
+         torque   25 kg.cm running, 35 kg.cm stall @ 11.1 V
+                  -> 2.45 N.m running, 3.43 N.m stall
+         speed    0.18 s / 60 deg @ 11.1 V -> 5.82 rad/s
+       We use the RUNNING torque as the limit, not stall: a policy that leans on
+       stall torque is exploiting something the hardware cannot sustain. -->
+  <xacro:property name="joint_limit"    value="2.094"/>  <!-- rad, +/-120 deg -->
+  <xacro:property name="joint_effort"   value="2.45"/>   <!-- N.m, running -->
+  <xacro:property name="joint_velocity" value="5.82"/>   <!-- rad/s, no load -->
   <xacro:property name="joint_damping"  value="0.05"/>
   <xacro:property name="joint_friction" value="0.02"/>
 

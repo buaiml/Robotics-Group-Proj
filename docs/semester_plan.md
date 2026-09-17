@@ -94,8 +94,9 @@ example, one open question for the group. Not a lecture read from notes.
 Stated plainly so nobody is surprised in Week 13.
 
 **Must hit**
-- A measured JetHexa model in both Gazebo and a fast training sim, built by the
-  students, with every number traceable to a measurement.
+- A trustworthy JetHexa model in both Gazebo and a fast training sim, its
+  geometry taken from the vendor URDF and its actuator behaviour from the
+  servo datasheet and bench tests.
 - A PPO policy that walks on flat ground in simulation under a velocity command.
 - That policy running on the real robot, walking on flat indoor floor.
 - A Gazebo campus world with a crosswalk, and a planner that routes through it.
@@ -119,7 +120,7 @@ where), outdoor localization robustness, night/wet conditions.
 
 | Weeks | Phase | Exit criterion |
 |---|---|---|
-| **1–2** | Foundations | Everyone runs the sim; robot measured; the team can state the problem precisely |
+| **1–2** | Foundations | All eight run the sim unaided; model rebuilt from the vendor URDF; people have found the area they want |
 | **3–4** | Tooling, RL basics & environment | Training sim installed; tool/model-zoo survey done; servos bench tested; observation and action spaces agreed; student-built MuJoCo model + Gymnasium env that runs random actions |
 | **5–6** | First policy | Something walks forward on flat ground, and the team can explain why it does |
 | **7–8** | Robustness | Velocity conditioning, domain randomization, light terrain. **Midterm demo** |
@@ -157,22 +158,37 @@ calendar, so nobody is surprised.
 
 ## 7. Teams
 
-Weeks 1–2 everyone does setup and foundations together. Specialization from Week 3.
+Weeks 1–2 have no fixed teams: everyone sets up their own environment, then
+picks whichever area of the robot or pipeline they find interesting. Use those
+two weeks to find out what people actually want to work on, then form the pairs
+below in Week 3 around what you saw.
 
-| Team | Name | People | Owns from Week 3 |
-|---|---|---|---|
-| **A** | Model & Sim | 2 | URDF/MJCF, measurements, actuator model, domain randomization |
-| **B** | RL | 2 | env, reward, training runs, policy |
-| **C** | World & Terrain | 2 | Gazebo worlds, campus map, terrain generation |
-| **D** | Perception & Deploy | 2 | sensors, SLAM/planning, on-robot integration |
+| Pair | Name | Owns from Week 3 |
+|---|---|---|
+| **A** | Model & Sim | URDF/MJCF, actuator model, domain randomization |
+| **B** | RL | env, reward, training runs, policy |
+| **C** | World & Terrain | Gazebo worlds, campus map, terrain generation |
+| **D** | Perception & Deploy | sensors, SLAM/planning, on-robot integration |
 
-Two people at 1.5 h/week is **~3 person-hours per team per week**. Size tasks to
-that. Team B is the critical path; spare capacity goes to B or to whoever is
+Pair by experience rather than by friendship: someone who has done a fair amount
+of programming with someone who hasn't. Each week the pair takes two overlapping
+tasks on the same topic and decides between themselves who does which. They
+review each other's PRs, and they take turns presenting, with whoever is newer
+to the topic going first — if they can't explain the pair's work, the pair isn't
+finished. That constraint is the point: it makes the more experienced partner
+teach rather than just ship.
+
+Two people at 1.5 h/week is **~3 person-hours per pair per week**. Size tasks to
+that. Pair B is the critical path; spare capacity goes to B, or to whoever is
 blocking B.
 
-**Rotate one person between teams at Week 8.** It costs a little velocity and
-buys two things: fresh eyes on a stale problem, and students who understand more
-than one quarter of the system.
+**Rotate at Week 8**: the more experienced partner moves one pair to the right,
+the other stays. Fresh eyes on a stale problem, each area keeps continuity, and
+those students end the semester having seen two quarters of the system.
+
+Revisit the pairings at the midpoint. Someone who has outgrown the
+less-experienced side of a pair should be moved, and told why — this is meant to
+be a ladder, not a fixed hierarchy for fourteen weeks.
 
 ## 8. Standing decisions
 

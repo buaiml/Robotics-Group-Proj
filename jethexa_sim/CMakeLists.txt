@@ -9,7 +9,9 @@ install(
 )
 
 install(
-  PROGRAMS scripts/stand.py
+  PROGRAMS
+    scripts/stand.py
+    scripts/check_model.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -2,10 +2,15 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!--
-    Sensor payload of the JetHexa Advanced Kit:
+    Sensor payload of the JetHexa Advanced Kit, for Gazebo Harmonic (gz-sim 8):
       - EAI G4 360-deg 2D lidar, mast-mounted above the chassis
       - 3D depth camera (RGB + depth), front-facing
       - IMU on the controller board
+
+    Sensors publish on gz transport topics. `config/gz_bridge.yaml` maps them
+    onto ROS topics under /jethexa. The world must load the sensors and imu
+    system plugins or these produce nothing - see worlds/flat_ground.sdf.
+
     Mount poses are approximate; re-measure against the real frame.
   -->
   <xacro:macro name="jethexa_sensors">
@@ -17,12 +22,19 @@
       <origin xyz="-0.020 0 ${body_z/2 + 0.060}" rpy="0 0 0"/>
     </joint>
 
+    <!-- Keep this link separate through URDF->SDF conversion, so the sensor
+         sits on its own frame instead of being folded into the chassis. -->
+    <gazebo reference="lidar_joint">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+
     <link name="lidar_link">
       <visual>
         <geometry><cylinder radius="0.035" length="0.040"/></geometry>
         <material name="lidar_blue"><color rgba="0.1 0.2 0.5 1"/></material>
       </visual>
-      <collision>
+      <collision name="lidar_collision">
         <geometry><cylinder radius="0.035" length="0.040"/></geometry>
       </collision>
       <inertial>
@@ -32,12 +44,13 @@
     </link>
 
     <gazebo reference="lidar_link">
-      <material>Gazebo/Blue</material>
-      <sensor name="lidar" type="ray">
-        <always_on>true</always_on>
+      <sensor name="lidar" type="gpu_lidar">
+        <topic>scan</topic>
+        <gz_frame_id>lidar_link</gz_frame_id>
+        <always_on>1</always_on>
         <visualize>false</visualize>
-        <update_rate>10.0</update_rate>
-        <ray>
+        <update_rate>10</update_rate>
+        <lidar>
           <scan>
             <horizontal>
               <samples>720</samples>
@@ -45,6 +58,12 @@
               <min_angle>-3.14159</min_angle>
               <max_angle>3.14159</max_angle>
             </horizontal>
+            <vertical>
+              <samples>1</samples>
+              <resolution>1</resolution>
+              <min_angle>0</min_angle>
+              <max_angle>0</max_angle>
+            </vertical>
           </scan>
           <range>
             <min>0.12</min>
@@ -56,15 +75,7 @@
             <mean>0.0</mean>
             <stddev>0.01</stddev>
           </noise>
-        </ray>
-        <plugin name="lidar_plugin" filename="libgazebo_ros_ray_sensor.so">
-          <ros>
-            <namespace>/jethexa</namespace>
-            <remapping>~/out:=scan</remapping>
-          </ros>
-          <output_type>sensor_msgs/LaserScan</output_type>
-          <frame_name>lidar_link</frame_name>
-        </plugin>
+        </lidar>
       </sensor>
     </gazebo>
 
@@ -75,12 +86,19 @@
       <origin xyz="${body_x/2} 0 0.015" rpy="0 0 0"/>
     </joint>
 
+    <!-- Keep this link separate through URDF->SDF conversion, so the sensor
+         sits on its own frame instead of being folded into the chassis. -->
+    <gazebo reference="camera_joint">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+
     <link name="camera_link">
       <visual>
         <geometry><box size="0.025 0.110 0.030"/></geometry>
         <material name="camera_grey"><color rgba="0.2 0.2 0.2 1"/></material>
       </visual>
-      <collision>
+      <collision name="camera_collision">
         <geometry><box size="0.025 0.110 0.030"/></geometry>
       </collision>
       <inertial>
@@ -98,10 +116,12 @@
     <link name="camera_optical_frame"/>
 
     <gazebo reference="camera_link">
-      <material>Gazebo/Grey</material>
-      <sensor name="depth_camera" type="depth">
-        <always_on>true</always_on>
-        <update_rate>15.0</update_rate>
+      <!-- RGB and depth are separate sensors in gz-sim. -->
+      <sensor name="rgb_camera" type="camera">
+        <topic>rgb_camera</topic>
+        <gz_frame_id>camera_optical_frame</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>15</update_rate>
         <camera>
           <horizontal_fov>1.047</horizontal_fov>
           <image>
@@ -110,19 +130,29 @@
             <format>R8G8B8</format>
           </image>
           <clip>
+            <near>0.05</near>
+            <far>15.0</far>
+          </clip>
+        </camera>
+      </sensor>
+
+      <sensor name="depth_camera" type="depth_camera">
+        <topic>depth_camera</topic>
+        <gz_frame_id>camera_optical_frame</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>15</update_rate>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R_FLOAT32</format>
+          </image>
+          <clip>
             <near>0.3</near>
             <far>8.0</far>
           </clip>
         </camera>
-        <plugin name="depth_camera_plugin" filename="libgazebo_ros_camera.so">
-          <ros>
-            <namespace>/jethexa</namespace>
-          </ros>
-          <camera_name>depth_camera</camera_name>
-          <frame_name>camera_optical_frame</frame_name>
-          <min_depth>0.3</min_depth>
-          <max_depth>8.0</max_depth>
-        </plugin>
       </sensor>
     </gazebo>
 
@@ -133,6 +163,13 @@
       <origin xyz="0 0 ${body_z/2}" rpy="0 0 0"/>
     </joint>
 
+    <!-- Keep this link separate through URDF->SDF conversion, so the sensor
+         sits on its own frame instead of being folded into the chassis. -->
+    <gazebo reference="imu_joint">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+
     <link name="imu_link">
       <inertial>
         <mass value="0.01"/>
@@ -142,8 +179,10 @@
 
     <gazebo reference="imu_link">
       <sensor name="imu" type="imu">
-        <always_on>true</always_on>
-        <update_rate>100.0</update_rate>
+        <topic>imu</topic>
+        <gz_frame_id>imu_link</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>100</update_rate>
         <imu>
           <angular_velocity>
             <x><noise type="gaussian"><mean>0.0</mean><stddev>2e-3</stddev></noise></x>
@@ -156,13 +195,6 @@
             <z><noise type="gaussian"><mean>0.0</mean><stddev>1.7e-2</stddev></noise></z>
           </linear_acceleration>
         </imu>
-        <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
-          <ros>
-            <namespace>/jethexa</namespace>
-            <remapping>~/out:=imu</remapping>
-          </ros>
-          <frame_name>imu_link</frame_name>
-        </plugin>
       </sensor>
     </gazebo>
 

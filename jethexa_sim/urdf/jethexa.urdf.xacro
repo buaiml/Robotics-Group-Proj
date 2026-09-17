@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <!--
   JetHexa (Hiwonder, Advanced Kit) - simplified simulation model.
+  Targets ROS 2 Humble + Gazebo Harmonic (gz-sim 8).
 
   18 DoF: 6 legs x (coxa yaw, femur pitch, tibia pitch).
   Link lengths / masses below are PLACEHOLDERS derived from the published
@@ -50,10 +51,6 @@
     <xacro:box_inertial m="${body_mass}" x="${body_x}" y="${body_y}" z="${body_z}"/>
   </link>
 
-  <gazebo reference="base_link">
-    <material>Gazebo/DarkGrey</material>
-  </gazebo>
-
   <!-- leg name, mount x, mount y, mount yaw -->
   <xacro:leg name="lf" x="${mount_x}"  y="${mount_y}"  yaw="${radians(45)}"/>
   <xacro:leg name="lm" x="0"           y="${mid_y}"    yaw="${radians(90)}"/>
@@ -67,7 +64,7 @@
   <!-- ros2_control: 18 position-commanded joints -->
   <ros2_control name="JetHexaSystem" type="system">
     <hardware>
-      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
     <xacro:leg_ifaces leg="lf"/>
     <xacro:leg_ifaces leg="lm"/>
@@ -78,7 +75,8 @@
   </ros2_control>
 
   <gazebo>
-    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+    <plugin filename="gz_ros2_control-system"
+            name="gz_ros2_control::GazeboSimROS2ControlPlugin">
       <parameters>$(find jethexa_sim)/config/controllers.yaml</parameters>
     </plugin>
   </gazebo>
