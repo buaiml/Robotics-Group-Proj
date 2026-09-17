@@ -85,21 +85,26 @@ cat > /etc/wsl.conf <<'EOF'
 default=jethexa
 EOF
 
-cat > /home/jethexa/.bashrc.jethexa <<'EOF'
-# --- JetHexa project environment ---
-source /opt/ros/humble/setup.bash
-[ -f /opt/gz_ws/install/setup.bash ] && source /opt/gz_ws/install/setup.bash
-[ -f "$HOME/jethexa_ws/install/setup.bash" ] && source "$HOME/jethexa_ws/install/setup.bash"
-
+# Environment goes in /etc/profile.d, NOT ~/.bashrc. Ubuntu's .bashrc returns
+# early for non-interactive shells, so anything put there is invisible to
+#   wsl -d jethexa -- bash -lc "..."
+# which is how scripts and CI will invoke this environment.
+cat > /etc/profile.d/jethexa.sh <<'EOF'
+# --- JetHexa project environment (ROS 2 Humble + Gazebo Harmonic) ---
 export GZ_VERSION=harmonic
 export ROS_DOMAIN_ID=42
-# WSLg software rendering fallback: uncomment if the Gazebo GUI misbehaves.
-# export LIBGL_ALWAYS_SOFTWARE=1
-EOF
 
-grep -q 'bashrc.jethexa' /home/jethexa/.bashrc 2>/dev/null || \
-  echo 'source $HOME/.bashrc.jethexa' >> /home/jethexa/.bashrc
-chown jethexa:jethexa /home/jethexa/.bashrc /home/jethexa/.bashrc.jethexa
+[ -f /opt/ros/humble/setup.bash ] && . /opt/ros/humble/setup.bash
+[ -f /opt/gz_ws/install/setup.bash ] && . /opt/gz_ws/install/setup.bash
+[ -f "$HOME/jethexa_ws/install/setup.bash" ] && . "$HOME/jethexa_ws/install/setup.bash"
+
+# WSLg software-rendering fallback: uncomment if the Gazebo GUI misbehaves.
+# export LIBGL_ALWAYS_SOFTWARE=1
+
+# Always succeed, so a missing workspace never breaks the login shell.
+true
+EOF
+chmod 0644 /etc/profile.d/jethexa.sh
 
 step "versions"
 set +u
