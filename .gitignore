@@ -1,0 +1,20 @@
+# colcon build products, if anyone builds inside the repo
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+
+# Machine-specific root certificates (antivirus / proxy TLS interception).
+# They belong to one person's machine, not to the project. See
+# tools/extra-ca/README.md.
+tools/extra-ca/*.crt
+tools/extra-ca/*.pem
+
+# rosbags and training output get large quickly
+*.db3
+*.mcap
+runs/
+checkpoints/

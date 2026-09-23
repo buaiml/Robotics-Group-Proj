@@ -1,0 +1,23 @@
+# Everything that runs or is parsed inside Linux must have LF line endings.
+#
+# This repo is edited on Windows (core.autocrlf=true is common there) and run in
+# WSL and Docker. A CRLF shell script dies on its first line with
+# "set: pipefail\r: invalid option name", and a CRLF shebang makes `ros2 run`
+# look for an interpreter literally called "python3\r". Both happened.
+#
+# This file makes git check these out as LF regardless of anyone's autocrlf
+# setting, so it cannot quietly come back.
+
+* text=auto eol=lf
+
+# Windows-side scripts keep CRLF, which is what PowerShell expects.
+*.ps1  text eol=crlf
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Binary assets that might appear later (meshes, images). Never touch these.
+*.stl  binary
+*.dae  binary
+*.png  binary
+*.jpg  binary
+*.pdf  binary

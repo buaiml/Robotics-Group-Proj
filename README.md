@@ -11,6 +11,11 @@ hardware reference and the semester plan.
   teams, teaching calendar, standing decisions, risks.
 - [`docs/tasks_weeks_1_2.md`](docs/tasks_weeks_1_2.md) — Weeks 1–2 task list.
 - [`docs/commands.md`](docs/commands.md) — command reference for everyday sim work.
+- [`docs/setup.md`](docs/setup.md) — installing the environment: WSL, Docker, VM
+  or bare metal.
+- [`docs/teaching/`](docs/teaching) — mini-lecture plans for the weekly meetings.
+- [`tools/`](tools) — the provisioning script, a Dockerfile, and the one-shot
+  Windows/WSL setup.
 
 ## Versions, and why
 
@@ -44,7 +49,9 @@ slam_toolbox, MuJoCo and Gymnasium installed. `gz_ros2_control` is built at
 `/etc/profile.d/jethexa.sh`, so every login shell has ROS and `GZ_VERSION` set.
 The workspace lives at `~/jethexa_ws`.
 
-To set this up elsewhere, see [`docs/setup.md`](docs/setup.md).
+To set this up elsewhere — another WSL instance, Docker, a VM or bare metal —
+see [`docs/setup.md`](docs/setup.md). It is the same provisioning script in every
+case; it works out where it is running and adjusts.
 
 ## Build and run
 
@@ -101,10 +108,14 @@ meshes in the robot's own ROS packages, so the fix is to copy that off the robot
 and fold its numbers in — a Week 2 task, and the one that makes this sim mean
 anything.
 
-**The stance height does not match the model.** `stand.py` settles the body about
-5.3 cm off the ground, while `stand_height` in `props.xacro` claims 12 cm. The
-placeholder link lengths and the arbitrary stance angles simply disagree. Both
-get fixed once the robot is measured.
+**The stance height does not match the model.** `stand.py` settles the body
+52.5 mm off the ground while `stand_height` in `props.xacro` claims 120 mm. This
+is not a bug: forward kinematics on the commanded angles (femur -35 deg, tibia
++75 deg) predicts exactly 52.5 mm, and the sim measures 52.5 mm. The stance
+angles were picked by hand and they put the foot where the maths says. Reaching
+120 mm needs the foot 108 mm below the coxa joint, which is inside the leg's
+reach - so it needs better angles, not a different model. Worked through in
+[docs/teaching/week2_kinematics.md](docs/teaching/week2_kinematics.md).
 
 **No foot contact sensors.** Two reasons: the real robot has no foot switches, so
 a policy using contact could not be deployed; and Gazebo's contact sensors do not
