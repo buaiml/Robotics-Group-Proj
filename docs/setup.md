@@ -203,17 +203,46 @@ message explains it, and [`tools/extra-ca/README.md`](../tools/extra-ca/README.m
 has the three-step fix. This happened on the project machine (Norton), so it is
 not hypothetical.
 
-**Run the sim headless.** A GUI out of a container needs X11 forwarding, which
-is straightforward on a Linux host and awkward on Windows and macOS:
+**Seeing the Gazebo window.** A container has no screen of its own. Start it
+with:
+
+```bash
+bash tools/docker_run.sh gui
+```
+
+On a Mac or Windows, this runs a virtual screen inside the container and
+shows it in your web browser. Open
+<http://localhost:6080/vnc.html?autoconnect=1&resize=remote>, then launch the
+sim as normal in the container. Gazebo appears in the browser tab. It renders
+in software, so it is slower than a native window, but it works on any
+machine. (Forwarding the window to the Mac with XQuartz does not work: its
+OpenGL is too old for Gazebo.) On a Linux host, `gui` forwards the window to
+your desktop instead.
+
+**Using your own container** rather than `docker_run.sh`? The browser port has
+to be published when the container is created, so save it as an image and
+start a new one from that. Run this on the Mac, not inside the container (find
+the name with `docker ps -a`):
+
+```bash
+docker commit <container-name> jethexa-mine
+```
+
+```bash
+docker run -it --shm-size=1g -p 127.0.0.1:6080:6080 -e DISPLAY=:1 -e LIBGL_ALWAYS_SOFTWARE=1 jethexa-mine bash -l
+```
+
+Then, inside it, from the repo folder:
+
+```bash
+bash tools/desktop.sh
+```
+
+**No window needed?** Run headless; everything except the window still works:
 
 ```bash
 ros2 launch jethexa_sim jethexa_gazebo.launch.py gui:=false
 ```
-
-On a Linux host you can try `tools/docker_run.sh gui`, which forwards
-`/tmp/.X11-unix` and runs `xhost +local:docker`. Everywhere else, stay headless
-and inspect the sim through topics and `gz model -m jethexa -p` — which is how
-most of the work gets done anyway.
 
 Two flags in the run command that are not optional, and why:
 

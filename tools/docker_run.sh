@@ -3,7 +3,9 @@
 #
 #   tools/docker_run.sh build     build the image (~20 min the first time)
 #   tools/docker_run.sh shell     open a shell in it (default)
-#   tools/docker_run.sh gui       same, but try to forward the Gazebo GUI
+#   tools/docker_run.sh gui       same, with windows: forwarded to your X11
+#                                 desktop on Linux, otherwise shown in your web
+#                                 browser at http://localhost:6080/vnc.html
 #   tools/docker_run.sh run CMD   run one command without a terminal, e.g.
 #                                 tools/docker_run.sh run colcon build
 #
@@ -106,14 +108,20 @@ gui_run() {
       echo "note: xhost not found; if the GUI is refused, install x11-xserver-utils"
     fi
     extra=(-e "DISPLAY=$DISPLAY" -v /tmp/.X11-unix:/tmp/.X11-unix)
+    # ${arr[@]+...} rather than "${arr[@]}": macOS ships bash 3.2, where set -u
+    # treats an empty array as unbound and would kill the script right here.
+    docker run -it --name "$CONTAINER" "${RUN_ARGS[@]}" ${extra[@]+"${extra[@]}"} "$IMAGE" bash -l
   else
-    echo "no X11 socket found. On Windows or macOS, run the sim headless:"
-    echo "  ros2 launch jethexa_sim jethexa_gazebo.launch.py gui:=false"
-    echo "continuing without GUI forwarding."
+    # macOS / Windows: no X server to forward to (and XQuartz's OpenGL is too
+    # old for Gazebo anyway). Run a virtual screen in the container and view it
+    # in the browser. Port published on the host's loopback only.
+    echo "windows will appear in your browser: http://localhost:6080/vnc.html?autoconnect=1&resize=remote"
+    docker run -it --name "$CONTAINER" "${RUN_ARGS[@]}" \
+      -p 127.0.0.1:6080:6080 \
+      -e DISPLAY=:1 -e LIBGL_ALWAYS_SOFTWARE=1 \
+      -v "$REPO_ROOT/tools:/home/jethexa/tools:ro" \
+      "$IMAGE" bash -lc 'bash ~/tools/desktop.sh && exec bash -l'
   fi
-  # ${arr[@]+...} rather than "${arr[@]}": macOS ships bash 3.2, where set -u
-  # treats an empty array as unbound and would kill the script right here.
-  docker run -it --name "$CONTAINER" "${RUN_ARGS[@]}" ${extra[@]+"${extra[@]}"} "$IMAGE" bash -l
 }
 
 run_cmd() {

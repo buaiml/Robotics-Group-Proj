@@ -27,6 +27,14 @@ RUN sed -i 's/\r$//' /tmp/provision.sh \
  && JETHEXA_ENV=docker bash /tmp/provision.sh \
  && rm -f /tmp/provision.sh
 
+# Virtual screen + browser viewer for `tools/docker_run.sh gui` (see
+# tools/desktop.sh). Its own layer, after the slow one above, so adding it
+# doesn't make anyone redo the 20-minute provisioning step.
+RUN apt-get update -qq \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+      tigervnc-standalone-server novnc python3-websockify openbox \
+ && rm -rf /var/lib/apt/lists/*
+
 # Non-root user, so files created in a mounted workspace are not owned by root
 # on the host. UID 1000 matches the first user on most Linux desktops; override
 # at build time if yours differs:
