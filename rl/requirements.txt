@@ -1,0 +1,11 @@
+# Already installed by tools/provision_ubuntu2204.sh. If your environment was
+# set up before rl/ existed, install these without re-provisioning:
+#
+#   pip install --user -r rl/requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+#
+# numpy must stay below 2: ROS 2 Humble's cv_bridge is built against numpy 1.x.
+numpy<2
+mujoco==3.13.0
+gymnasium==1.3.0
+torch==2.8.0
+stable-baselines3==2.9.0

@@ -48,6 +48,18 @@ Hold a standing stance (runs until you stop it):
 ros2 run jethexa_sim stand.py
 ```
 
+Run the inverse-kinematics demo (stop `stand.py` first):
+
+```bash
+ros2 run jethexa_sim ik_demo.py
+```
+
+Check whether every demo pose is reachable, without moving the robot:
+
+```bash
+ros2 run jethexa_sim ik_demo.py --check
+```
+
 Command all 18 joints yourself, once:
 
 ```bash
@@ -133,6 +145,17 @@ Where the robot actually is:
 gz model -m jethexa -p
 ```
 
+Drop things into the world: a crate onto the robot, or a fixed step in front
+of it. Run it with `--help` for the options.
+
+```bash
+ros2 run jethexa_sim drop_box.py
+```
+
+```bash
+ros2 run jethexa_sim drop_box.py --x 0.3 --z 0.01 --size 0.3 0.6 0.02 --static
+```
+
 Simulation speed, which is the number that matters for training:
 
 ```bash
@@ -187,11 +210,25 @@ ros2 bag play standtest
 
 ## When it goes wrong
 
+Everything in slow motion, with the real-time factor at a few percent while the
+Gazebo window is open: on a laptop with two GPUs, WSL is drawing on the
+built-in Intel one. This should print `NVIDIA`:
+
+```bash
+printenv MESA_D3D12_DEFAULT_ADAPTER_NAME
+```
+
+If it's empty, re-run the provisioning script (it now sets this), or put
+`MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA` in front of the launch command.
+
 Gazebo left running after a crash, or a port already in use:
 
 ```bash
-pkill -f 'gz sim'
+pkill -f '[g]z sim'
 ```
+
+The brackets matter. Plain `'gz sim'` also matches any script or shell whose own
+command line contains those words, and kills it before it kills Gazebo.
 
 `ros2` CLI throwing `!rclpy.ok()` or hanging — a CLI daemon problem, not your
 nodes:

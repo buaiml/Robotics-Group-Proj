@@ -12,6 +12,8 @@ install(
   PROGRAMS
     scripts/stand.py
     scripts/check_model.py
+    scripts/ik_demo.py
+    scripts/drop_box.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

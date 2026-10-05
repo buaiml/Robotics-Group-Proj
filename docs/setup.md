@@ -12,12 +12,16 @@ eat a large share of this project's total time budget.
 terminal, clone the repo there, and run:
 
 ```bash
-git clone https://github.com/buaiml/Robotics-Group-Proj.git && cd Robotics-Group-Proj
+mkdir -p ~/jethexa_ws/src && cd ~/jethexa_ws/src && git clone https://github.com/buaiml/Robotics-Group-Proj.git
 ```
 
 ```bash
-sudo bash tools/provision_ubuntu2204.sh
+sudo bash ~/jethexa_ws/src/Robotics-Group-Proj/tools/provision_ubuntu2204.sh
 ```
+
+Cloning into `~/jethexa_ws/src` matters: that's where the build looks for the
+package, and it means your edits stay inside your git clone, where you can commit
+them.
 
 It installs everything for **your** user, whatever it's called. It never creates
 another account, and it never touches your password, sudo settings or WSL login.
@@ -411,12 +415,33 @@ The build needs `GZ_VERSION=harmonic` set, which the script handles.
 
 ## Things that bit us, so they don't bite you
 
+**Gazebo crawling at ~4% real time with the window open, on a laptop with an
+NVIDIA card.** WSL draws on the first GPU Windows lists, which is usually the
+built-in Intel one. On the project laptop, moving it to the RTX card took the
+real-time factor from 0.04 to 1.0. The provisioning script now picks NVIDIA
+automatically when there is one; check with
+`printenv MESA_D3D12_DEFAULT_ADAPTER_NAME`.
+
+**`ros2: command not found` in a setup that finished fine.** Usually a Docker
+container, opened with `docker exec -it <container> bash` or `docker run ... bash`.
+Those start a *non-login* shell, and older versions of the provisioning script
+only loaded ROS into login shells. Two quick checks:
+
+- `bash -lc "command -v ros2"` prints a path → the install is fine; only the
+  shell is missing the environment. For this terminal run
+  `source /etc/profile.d/jethexa.sh`; to fix it for good, pull the latest repo
+  and re-run the provisioning script (it now hooks `/etc/bash.bashrc` too).
+- It prints nothing → the install really isn't in *this* container. Either the
+  script stopped early (scroll up for `FAILED`), or you are in a **new**
+  container: every `docker run` starts from the image again and drops whatever
+  was installed in the last one. Use `tools/docker_run.sh`, which bakes the
+  install into the image, or reuse the same container with `docker start -ai
+  <name>`.
+
 **Windows line endings break everything that runs in Linux.** Git on Windows
 often has `core.autocrlf=true`, which checks files out with CRLF. A CRLF shell
-script dies on its first line with `set: pipefail
-: invalid option name`, and
-a CRLF shebang makes `ros2 run` look for an interpreter called `python3
-`.
+script dies on its first line with `set: pipefail\r: invalid option name`, and
+a CRLF shebang makes `ros2 run` look for an interpreter called `python3\r`.
 The repo's `.gitattributes` now forces LF for everything Linux-bound, so fresh
 clones are fine. If you cloned before it existed, the simplest fix is a fresh
 clone into a new folder. To fix it in place instead, **commit your work first** —

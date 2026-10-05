@@ -146,6 +146,8 @@ sensors visible in RViz, or a written problem statement we agree on.
 
 ## Coming in Weeks 3 and 4
 
+Week 3's tasks are in [tasks_week_3.md](tasks_week_3.md).
+
 Setting up the MuJoCo training simulator, surveying the RL tools and model zoos,
 and settling the observation and action spaces. Those need the teaching sessions
 on simulators and reinforcement learning first.

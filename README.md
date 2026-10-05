@@ -10,6 +10,8 @@ hardware reference and the semester plan.
 - [`docs/semester_plan.md`](docs/semester_plan.md) — the 14-week plan: scope,
   teams, teaching calendar, standing decisions, risks.
 - [`docs/tasks_weeks_1_2.md`](docs/tasks_weeks_1_2.md) — Weeks 1–2 task list.
+- [`docs/tasks_week_3.md`](docs/tasks_week_3.md) — Week 3: Gazebo and research.
+- [`rl/`](rl) — RL proof of concept: PPO in MuJoCo, same robot model as Gazebo.
 - [`docs/commands.md`](docs/commands.md) — command reference for everyday sim work.
 - [`docs/setup.md`](docs/setup.md) — installing the environment: WSL, Docker, VM
   or bare metal.

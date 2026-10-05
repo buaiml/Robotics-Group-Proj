@@ -148,7 +148,7 @@ step "checking HTTPS works"
 # Only hosts this script actually uses over HTTPS. NOT packages.ros.org: apt
 # reaches that over plain HTTP (packages are GPG-signed), and its HTTPS
 # certificate is for *.osuosl.org, so checking it would fail on every machine.
-for url in https://github.com/ https://packages.osrfoundation.org/ https://pypi.org/simple/; do
+for url in https://github.com/ https://packages.osrfoundation.org/ https://pypi.org/simple/ https://download.pytorch.org/whl/cpu/; do
   if ! err="$(curl -sS -o /dev/null --max-time 20 "$url" 2>&1)"; then
     echo >&2
     echo "ERROR: cannot reach $url" >&2
@@ -247,7 +247,7 @@ set -u
 export GZ_VERSION=harmonic
 colcon build --merge-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
-step "python: mujoco + gymnasium"
+step "python: mujoco, gymnasium, pytorch (CPU), stable-baselines3"
 # numpy and matplotlib come from apt, NEVER pip. ROS 2 Humble's compiled Python
 # packages (cv_bridge, point cloud tools) are built against Ubuntu's numpy 1.21.
 # A pip-installed numpy 2 lands in /usr/local, shadows it, and breaks them -
@@ -257,7 +257,11 @@ pip3 install --no-cache-dir -q --upgrade pip
 # Exact versions, verified together with Ubuntu's numpy 1.21.5. Unpinned, a
 # future mujoco that wants numpy 2 would make pip upgrade it anyway.
 pip3 install --no-cache-dir -q "mujoco==3.13.0" "gymnasium==1.3.0"
-python3 -c 'import numpy, mujoco, gymnasium; print("numpy", numpy.__version__, "| mujoco", mujoco.__version__, "| gymnasium", gymnasium.__version__)'
+# RL proof of concept (rl/). CPU-only PyTorch: ~200 MB instead of ~3 GB of CUDA
+# libraries, and for the small networks we train a CPU is as fast as a GPU.
+# "numpy<2" is repeated here so pip cannot "helpfully" upgrade it on the way.
+pip3 install --no-cache-dir -q "numpy<2" "torch==2.8.0" "stable-baselines3==2.9.0"   --extra-index-url https://download.pytorch.org/whl/cpu
+python3 -c 'import numpy, mujoco, gymnasium, torch, stable_baselines3 as sb3; print("numpy", numpy.__version__, "| mujoco", mujoco.__version__, "| gymnasium", gymnasium.__version__, "| torch", torch.__version__, "| sb3", sb3.__version__)'
 case "$(python3 -c 'import numpy; print(numpy.__version__)')" in
   1.*) ;;
   *) echo "ERROR: numpy was upgraded past 1.x; ROS 2 Humble's cv_bridge will break" >&2; exit 1 ;;
@@ -342,6 +346,13 @@ export ROS_DOMAIN_ID=42
 [ -f /opt/gz_ws/install/setup.bash ] && . /opt/gz_ws/install/setup.bash
 [ -f "$HOME/jethexa_ws/install/setup.bash" ] && . "$HOME/jethexa_ws/install/setup.bash"
 
+# WSLg renders on the FIRST GPU Windows lists, which on gaming laptops is the
+# integrated Intel one. Gazebo then crawls at ~4% real time with the GUI open,
+# instead of 100%. If an NVIDIA GPU is present, use it.
+if [ -e /dev/dxg ] && [ -e /usr/lib/wsl/lib/nvidia-smi ] && [ -z "${MESA_D3D12_DEFAULT_ADAPTER_NAME:-}" ]; then
+  export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA
+fi
+
 # WSLg software-rendering fallback: uncomment if the Gazebo GUI misbehaves.
 # export LIBGL_ALWAYS_SOFTWARE=1
 
@@ -349,6 +360,15 @@ export ROS_DOMAIN_ID=42
 true
 EOF
 chmod 0644 /etc/profile.d/jethexa.sh
+
+# profile.d only reaches LOGIN shells. `docker exec -it <c> bash`, a new VS Code
+# terminal, or a plain `bash` all start non-login shells, which then say
+# "ros2: command not found" on a perfectly good install. /etc/bash.bashrc is
+# read by every interactive bash, for every user including root, so hook it
+# there too. Sourcing twice is harmless: the ROS setup files skip duplicates.
+if ! grep -qs 'profile.d/jethexa.sh' /etc/bash.bashrc; then
+  echo '[ -f /etc/profile.d/jethexa.sh ] && . /etc/profile.d/jethexa.sh' >> /etc/bash.bashrc
+fi
 
 if [ "$CLEAN_APT" = "1" ]; then
   step "cleaning up apt lists"

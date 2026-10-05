@@ -9,6 +9,7 @@
 #
 # The repo's jethexa_sim/ is mounted at ~/jethexa_ws/src/jethexa_sim inside the
 # container, so you edit on the host and build in the container.
+# rl/ is mounted at ~/rl the same way.
 #
 # Works from Linux, macOS, and Git Bash on Windows.
 set -euo pipefail
@@ -84,6 +85,7 @@ RUN_ARGS=(
   --rm
   --shm-size=1g
   -v "$REPO_ROOT/jethexa_sim:/home/jethexa/jethexa_ws/src/jethexa_sim"
+  -v "$REPO_ROOT/rl:/home/jethexa/rl"
   -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-42}"
 )
 

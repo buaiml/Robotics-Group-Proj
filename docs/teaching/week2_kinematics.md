@@ -213,3 +213,67 @@ That question is the observation-space task, and it is the next thing we decide.
 Ask someone to change the stance angles in `stand.py` live, have the room predict
 the new body height from the FK, then run it and check. It takes two minutes and
 it converts the whole lecture from "notes" to "a tool I can use".
+
+---
+
+## The live demo: IK in action (about 1 minute)
+
+Run it at the end of section 3, straight after inverse kinematics. Start the
+simulator before the meeting, with the window visible:
+
+```bash
+ros2 launch jethexa_sim jethexa_gazebo.launch.py
+```
+
+Then, in a second terminal (stop `stand.py` first if it's running, because two
+programs sending joint commands fight each other):
+
+```bash
+ros2 run jethexa_sim ik_demo.py
+```
+
+The terminal narrates each segment, so you can talk over it. What to point out:
+
+| Segment | What the room sees | What to say |
+|---|---|---|
+| **stand** | Robot rises into its home stance | Nothing clever yet: blending from wherever the joints are |
+| **height** | Body rises to 12 cm, sinks to 6 cm, feet planted | That's the exercise from section 3. IK is answering "what angles give 12 cm?" for six legs, 50 times a second |
+| **sway** | Body rolls, then pitches, 10 degrees | Same world point for every foot, re-expressed in a tilted body frame. That's all body control is |
+| **twist** | Body yaws 12 degrees on the spot | Coxa joints doing the work, which you saw on the diagram |
+| **lean** | Body circles over its feet | The centre of mass moves inside the support polygon (section 4), so it can't fall |
+| **wave** | Front-left foot lifts and draws circles | Five feet down, so still statically stable: the hexapod advantage |
+
+Run a single segment with, for example, `ros2 run jethexa_sim ik_demo.py wave`.
+
+### Three things the demo shows that are worth saying out loud
+
+**1. Check the plan before you move.** Before anything moves, the demo solves
+every pose of every segment and reports the tightest joint margin:
+
+```bash
+ros2 run jethexa_sim ik_demo.py --check
+```
+
+This is not decoration. The first version of the wave made the knee fold to
+129°, past the HX-35H's 120° limit. The real robot couldn't have done that
+motion. A check like this catches it before a servo does. A good question for
+the room: *what would that have done to a real servo?*
+
+**2. Commanded is not measured.** After each segment it prints how far the real
+joints lagged the command, typically under 1°. That lag is the controller, and
+on the real robot it will be a servo with an internal loop we haven't measured
+yet. That's the sim-to-real gap in miniature, and it sets up Week 7.
+
+**3. Simulation time vs wall-clock time.** The demo runs on *simulation* time.
+Gazebo sometimes stalls (we measured it dropping to 2% of real time with the
+window open). An earlier version ran on the wall clock: during a stall it kept
+sending commands forward while the robot was frozen, and the joints then
+snapped to catch up, lagging up to 12° instead of under 1°. The same trap waits
+in RL training: an agent must see time the way the simulator does.
+
+### It follows the model
+
+The demo reads link lengths and leg mounts from the URDF when it starts. When
+someone folds in the vendor's real geometry, the demo uses it automatically,
+and `--check` says straight away whether every motion is still reachable. Walking
+is deliberately **not** in the demo: that's the open-loop gait task.
